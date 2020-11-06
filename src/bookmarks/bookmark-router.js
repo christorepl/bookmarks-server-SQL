@@ -1,9 +1,11 @@
 const express = require('express')
-const { v4: uuid } = require('uuid')
+// const { v4: uuid } = require('uuid')
+const xss = require('xss')
 const BookmarksService = require('../bookmarks-service')
 const logger = require('../logger')
 const bodyParser = express.json()
 const bookmarkRouter = express.Router()
+const jsonParser = express.json()
 
 bookmarkRouter
     .route('/bookmarks')
@@ -15,49 +17,37 @@ bookmarkRouter
             })
             .catch(next)
     })
-    .post(bodyParser, (req, res) => {
+    .post(jsonParser, (req, res, next) => {
+
     const { title, url, description, rating } = req.body
-    if(!title){
-        logger.error('title is rqrd')
-        return res
-            .status(400)
-            .send('invalid title data')
-    }
 
-    if(!url){
-        logger.error(`URL is rqrd`)
-        return res
-            .status(400)
-            .send('invalid url data')
-    }
-
-    if(!description){
-        logger.error('descr rqrd')
-        return res
-            .status(400)
-            .send('invalid descr data')
-    }
-
-    if(!rating){
-        logger.error('rating rqrd')
-        return res
-            .status(400)
-            .send('invalid rating data')
-    }
-
-    const id = uuid()
-    const bookmark = {
-        id,
+    const newBookmark = {
+        // id,
         title,
         url,
         description,
         rating
     }
-    bookmarks.push(bookmark)
+
+    for (const [key, value] of Object.entries(newBookmark)) {
+        if (value == null) {
+            return res.status(400).json({
+                error: { message: `Missing '${key}' in request body` }
+            })
+        }
+    }
+
+    BookmarksService.insertBookmark(
+        req.app.get('db'),
+        newBookmark
+    )
+    .then(bookmark => {
     res
         .status(201)
-        .location(`http://localhost:8000/bookmarks/${id}`)
-        .json({bookmark})
+        .location(`/bookmarks/${bookmark.id}`)
+        .json(bookmark)
+})
+    .catch(next)
 })
 
 bookmarkRouter
@@ -70,7 +60,13 @@ bookmarkRouter
                 if(!bookmark) {
                     return res.status(404).json({error: { message: `Bookmark doesn't exist`}})
                 }
-                res.json(bookmark)
+                res.json(xss(bookmark.url))
+                // .json({
+                //     id: bookmark.id,
+                //     title: xss(bookmark.title),
+                //     description: xss(bookmark.description),
+                //     url: xss(bookmark.url)
+                // })
             })
             .catch(next)
           })
