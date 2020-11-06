@@ -60,13 +60,14 @@ bookmarkRouter
                 if(!bookmark) {
                     return res.status(404).json({error: { message: `Bookmark doesn't exist`}})
                 }
-                res.json(xss(bookmark.url))
-                // .json({
-                //     id: bookmark.id,
-                //     title: xss(bookmark.title),
-                //     description: xss(bookmark.description),
-                //     url: xss(bookmark.url)
-                // })
+                res
+                .json({
+                    description: xss(bookmark.description),
+                    id: bookmark.id,
+                    rating: bookmark.rating,
+                    title: xss(bookmark.title),
+                    url: xss(bookmark.url)
+                })
             })
             .catch(next)
           })
